@@ -11,7 +11,22 @@ const resultsContainer = document.getElementById('resultsContainer');
 const errorMessage = document.getElementById('errorMessage');
 const sourceBadge = document.getElementById('sourceBadge');
 
-// Initialize
+// Initialize side panel
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('Side panel loaded, checking for pending analysis...');
+    
+    // Check if there's a pending analysis from background
+    chrome.runtime.sendMessage({ action: 'getPendingAnalysis' }, (response) => {
+        if (chrome.runtime.lastError) {
+            console.log('Background not ready yet');
+        } else if (response && response.data) {
+            console.log('Found pending analysis, displaying...');
+            displayResults(response.data);
+        }
+    });
+});
+
+// Listen for messages from background or popup
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === 'analyzeCode') {
         currentCode = message.code;
@@ -27,10 +42,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         showError(message.error);
     }
     
+    // Handle direct analysis (fallback when background isn't ready)
+    if (message.action === 'directAnalysis') {
+        currentCode = message.code;
+        currentSource = message.source || 'page';
+        performAnalysis(message.code);
+    }
+    
     return true;
 });
 
-// Perform analysis
+// Perform analysis with improved error handling
 async function performAnalysis(code) {
     showLoading();
     
@@ -43,85 +65,122 @@ async function performAnalysis(code) {
             body: JSON.stringify({ code }),
         });
 
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `Server returned ${response.status}`);
+        }
+
         const result = await response.json();
 
-        if (!response.ok || !result.success) {
+        if (!result.success) {
             throw new Error(result.error || 'Analysis failed');
         }
 
         displayResults(result.data);
     } catch (error) {
         console.error('Analysis error:', error);
-        showError(error.message);
+        
+        // Try fallback analysis if backend is unavailable
+        if (error.message.includes('ECONNREFUSED') || error.message.includes('Failed to fetch')) {
+            showError('Backend server not running. Please start the backend on localhost:3000');
+        } else {
+            showError(error.message);
+        }
     }
 }
 
-// Display results
+// Display results with proper null checks
 function displayResults(data) {
+    if (!data) {
+        showError('No analysis data received');
+        return;
+    }
+    
     // Set source badge
     sourceBadge.textContent = currentSource === 'selection' ? 'Code X-Ray' : 'Page Analysis';
     
     // Tech Stack
     const techStackEl = document.getElementById('techStack');
-    techStackEl.innerHTML = data.tech_stack.length > 0 
-        ? data.tech_stack.map(tech => `<span class="tech-tag">${tech}</span>`).join('')
-        : '<span style="color: #6b6b7b; font-size: 0.85rem;">No technologies detected</span>';
+    if (techStackEl) {
+        techStackEl.innerHTML = data.tech_stack && data.tech_stack.length > 0 
+            ? data.tech_stack.map(tech => `<span class="tech-tag">${escapeHtml(tech)}</span>`).join('')
+            : '<span class="no-data">No technologies detected</span>';
+    }
 
     // Concepts
     const conceptsEl = document.getElementById('concepts');
-    conceptsEl.innerHTML = data.concepts.length > 0
-        ? data.concepts.map(concept => `<li>${concept}</li>`).join('')
-        : '<span style="color: #6b6b7b; font-size: 0.85rem;">No concepts detected</span>';
+    if (conceptsEl) {
+        conceptsEl.innerHTML = data.concepts && data.concepts.length > 0
+            ? data.concepts.map(concept => `<li>${escapeHtml(concept)}</li>`).join('')
+            : '<span class="no-data">No concepts detected</span>';
+    }
 
     // Explanation
     const explanationEl = document.getElementById('explanation');
-    explanationEl.textContent = data.explanation || 'No explanation available';
+    if (explanationEl) {
+        explanationEl.textContent = data.explanation || 'No explanation available';
+    }
 
     // Architecture
     const architectureEl = document.getElementById('architecture');
-    architectureEl.textContent = data.architecture || 'Architecture analysis unavailable';
+    if (architectureEl) {
+        architectureEl.textContent = data.architecture || 'Architecture analysis unavailable';
+    }
 
     // Learning Roadmap
     const roadmapEl = document.getElementById('learningRoadmap');
-    roadmapEl.innerHTML = data.learning_roadmap.length > 0
-        ? data.learning_roadmap.map(step => `<li>${step}</li>`).join('')
-        : '<span style="color: #6b6b7b; font-size: 0.85rem;">No roadmap available</span>';
+    if (roadmapEl) {
+        roadmapEl.innerHTML = data.learning_roadmap && data.learning_roadmap.length > 0
+            ? data.learning_roadmap.map((step, index) => `<li><strong>Step ${index + 1}:</strong> ${escapeHtml(step)}</li>`).join('')
+            : '<span class="no-data">No roadmap available</span>';
+    }
 
     // Skill Gaps
     const skillGapsEl = document.getElementById('skillGaps');
-    skillGapsEl.innerHTML = data.skill_gaps.length > 0
-        ? data.skill_gaps.map(gap => `<span class="skill-gap">${gap}</span>`).join('')
-        : '<span style="color: #6b6b7b; font-size: 0.85rem;">No skill gaps identified</span>';
+    if (skillGapsEl) {
+        skillGapsEl.innerHTML = data.skill_gaps && data.skill_gaps.length > 0
+            ? data.skill_gaps.map(gap => `<span class="skill-gap">${escapeHtml(gap)}</span>`).join('')
+            : '<span class="no-data">No skill gaps identified</span>';
+    }
 
     // Show results
     hideLoading();
     hideError();
-    resultsContainer.style.display = 'block';
+    if (resultsContainer) {
+        resultsContainer.style.display = 'block';
+    }
+}
+
+// Escape HTML to prevent XSS
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 // Show loading state
 function showLoading() {
-    loadingState.style.display = 'flex';
-    errorState.style.display = 'none';
-    resultsContainer.style.display = 'none';
+    if (loadingState) loadingState.style.display = 'flex';
+    if (errorState) errorState.style.display = 'none';
+    if (resultsContainer) resultsContainer.style.display = 'none';
 }
 
 // Hide loading state
 function hideLoading() {
-    loadingState.style.display = 'none';
+    if (loadingState) loadingState.style.display = 'none';
 }
 
 // Show error
 function showError(message) {
-    errorMessage.textContent = message || 'Something went wrong';
-    loadingState.style.display = 'none';
-    errorState.style.display = 'flex';
-    resultsContainer.style.display = 'none';
+    if (errorMessage) errorMessage.textContent = message || 'Something went wrong';
+    if (loadingState) loadingState.style.display = 'none';
+    if (errorState) errorState.style.display = 'flex';
+    if (resultsContainer) resultsContainer.style.display = 'none';
 }
 
 // Hide error
 function hideError() {
-    errorState.style.display = 'none';
+    if (errorState) errorState.style.display = 'none';
 }
 
 // Retry analysis
@@ -133,17 +192,17 @@ function retryAnalysis() {
 
 // Close panel
 function closePanel() {
-    window.close();
+    if (window.close) window.close();
 }
 
 // Copy results
 async function copyResults() {
-    const techStack = document.getElementById('techStack').innerText;
-    const concepts = document.getElementById('concepts').innerText;
-    const explanation = document.getElementById('explanation').innerText;
-    const architecture = document.getElementById('architecture').innerText;
-    const roadmap = document.getElementById('learningRoadmap').innerText;
-    const skillGaps = document.getElementById('skillGaps').innerText;
+    const techStack = document.getElementById('techStack')?.innerText || '';
+    const concepts = document.getElementById('concepts')?.innerText || '';
+    const explanation = document.getElementById('explanation')?.innerText || '';
+    const architecture = document.getElementById('architecture')?.innerText || '';
+    const roadmap = document.getElementById('learningRoadmap')?.innerText || '';
+    const skillGaps = document.getElementById('skillGaps')?.innerText || '';
 
     const textToCopy = `
 CodeXray AI Analysis
@@ -169,7 +228,8 @@ Skill Gaps: ${skillGaps}
         await navigator.clipboard.writeText(textToCopy);
         showToast('Results copied!');
     } catch (error) {
-        showError('Failed to copy results');
+        console.error('Copy failed:', error);
+        showToast('Failed to copy results');
     }
 }
 
