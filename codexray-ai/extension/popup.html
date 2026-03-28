@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeXray AI</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <div class="logo-icon">🔍</div>
+                <h1>CodeXray AI</h1>
+            </div>
+            <p class="tagline">Learn while you vibe code</p>
+        </header>
+
+        <!-- Main Actions -->
+        <div class="actions">
+            <button class="btn btn-primary" id="analyzePageBtn">
+                <span>📄</span> Analyze Page Code
+            </button>
+            <button class="btn btn-secondary" id="openSidePanelBtn">
+                <span>📊</span> Open Side Panel
+            </button>
+        </div>
+
+        <!-- Selection Analysis -->
+        <div class="selection-section" id="selectionSection" style="display: none;">
+            <h3>Selected Code</h3>
+            <pre class="code-preview" id="codePreview"></pre>
+            <button class="btn btn-primary btn-small" id="analyzeSelectionBtn">
+                <span>🔍</span> Analyze Selection
+            </button>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="stats">
+            <div class="stat-item">
+                <span class="stat-value" id="codeBlocksCount">0</span>
+                <span class="stat-label">Code Blocks Found</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value" id="lastAnalysis">-</span>
+                <span class="stat-label">Last Analysis</span>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>Select code on any page and click to analyze</p>
+            <p class="hint">Works on GitHub, Replit, and more!</p>
+        </footer>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>
