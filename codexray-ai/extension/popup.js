@@ -13,6 +13,18 @@ const lastAnalysis = document.getElementById('lastAnalysis');
 
 let selectedCode = '';
 
+// Safe message sending with error handling
+async function sendMessageToTab(tabId, message) {
+    try {
+        const response = await chrome.tabs.sendMessage(tabId, message);
+        return response;
+    } catch (error) {
+        console.log('Message sending failed:', error.message);
+        // Content script may not be loaded yet
+        return null;
+    }
+}
+
 // Initialize popup
 async function init() {
     // Get current tab
@@ -20,13 +32,11 @@ async function init() {
     
     if (tab) {
         // Request code blocks count from content script
-        try {
-            const response = await chrome.tabs.sendMessage(tab.id, { action: 'getCodeInfo' });
-            if (response && response.codeBlocks) {
-                codeBlocksCount.textContent = response.codeBlocks;
-            }
-        } catch (error) {
-            console.log('Content script not loaded yet');
+        const response = await sendMessageToTab(tab.id, { action: 'getCodeInfo' });
+        if (response && response.codeBlocks !== undefined) {
+            codeBlocksCount.textContent = response.codeBlocks;
+        } else {
+            codeBlocksCount.textContent = '—';
         }
         
         // Load last analysis time
@@ -49,7 +59,7 @@ analyzePageBtn.addEventListener('click', async () => {
     
     try {
         // Send message to content script to extract code
-        const response = await chrome.tabs.sendMessage(tab.id, { 
+        const response = await sendMessageToTab(tab.id, { 
             action: 'extractCode' 
         });
         
@@ -57,12 +67,20 @@ analyzePageBtn.addEventListener('click', async () => {
             // Open side panel with results
             await chrome.sidePanel.open({ windowId: tab.windowId });
             
-            // Send code to side panel
+            // Send code to side panel via background
             setTimeout(() => {
                 chrome.runtime.sendMessage({ 
                     action: 'analyzeCode', 
                     code: response.code,
                     source: 'page'
+                }).catch(err => {
+                    console.error('Failed to send to background:', err);
+                    // Fallback: send directly to sidepanel
+                    chrome.runtime.sendMessage({ 
+                        action: 'directAnalysis',
+                        code: response.code,
+                        source: 'page'
+                    });
                 });
             }, 500);
             
@@ -85,7 +103,12 @@ analyzePageBtn.addEventListener('click', async () => {
 openSidePanelBtn.addEventListener('click', async () => {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (tab) {
-        await chrome.sidePanel.open({ windowId: tab.windowId });
+        try {
+            await chrome.sidePanel.open({ windowId: tab.windowId });
+        } catch (error) {
+            console.error('Failed to open side panel:', error);
+            alert('Side panel not available. Please use the popup.');
+        }
     }
 });
 
@@ -110,6 +133,8 @@ analyzeSelectionBtn.addEventListener('click', async () => {
                 action: 'analyzeCode', 
                 code: selectedCode,
                 source: 'selection'
+            }).catch(err => {
+                console.error('Failed to send to background:', err);
             });
         }, 500);
         
@@ -137,6 +162,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             selectionSection.style.display = 'none';
         }
     }
+    return true;
 });
 
 // Format time
