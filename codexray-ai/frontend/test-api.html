@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeXray AI - API Test</title>
+    <style>
+        body {
+            font-family: monospace;
+            background: #1a1a2e;
+            color: #eee;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        button {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        button:hover { opacity: 0.9; }
+        pre {
+            background: #0f0f1a;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .success { color: #4ade80; }
+        .error { color: #f87171; }
+    </style>
+</head>
+<body>
+    <h1>🔍 CodeXray AI - API Test</h1>
+    
+    <button onclick="testHealth()">Test Health Endpoint</button>
+    <button onclick="testAnalyze()">Test Analyze Endpoint</button>
+    
+    <h2>Response:</h2>
+    <pre id="response">Click a button to test...</pre>
+    
+    <script>
+        const API_URL = 'http://localhost:3000';
+        
+        async function testHealth() {
+            const output = document.getElementById('response');
+            output.textContent = 'Testing...';
+            
+            try {
+                const res = await fetch(`${API_URL}/health`);
+                const data = await res.json();
+                output.innerHTML = `<span class="success">✅ Success!</span>\n\n${JSON.stringify(data, null, 2)}`;
+            } catch (err) {
+                output.innerHTML = `<span class="error">❌ Error:</span> ${err.message}`;
+            }
+        }
+        
+        async function testAnalyze() {
+            const output = document.getElementById('response');
+            output.textContent = 'Analyzing...';
+            
+            const testCode = `
+import React, { useState } from 'react';
+
+function Counter() {
+  const [count, setCount] = useState(0);
+  
+  return (
+    <div>
+      <p>Count: {count}</p>
+      <button onClick={() => setCount(count + 1)}>Increment</button>
+    </div>
+  );
+}
+            `.trim();
+            
+            try {
+                const res = await fetch(`${API_URL}/analyze`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code: testCode })
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    output.innerHTML = `<span class="success">✅ Analysis Complete!</span>\n\nTech Stack: ${JSON.stringify(data.data.tech_stack)}\nConcepts: ${JSON.stringify(data.data.concepts)}\n\nExplanation:\n${data.data.explanation}`;
+                } else {
+                    output.innerHTML = `<span class="error">❌ Failed:</span> ${data.error}`;
+                }
+            } catch (err) {
+                output.innerHTML = `<span class="error">❌ Error:</span> ${err.message}`;
+            }
+        }
+    </script>
+</body>
+</html>
