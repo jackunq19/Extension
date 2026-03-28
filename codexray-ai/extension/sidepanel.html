@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeXray AI - Side Panel</title>
+    <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo-section">
+                <div class="logo-icon">🔍</div>
+                <div>
+                    <h1>CodeXray AI</h1>
+                    <p class="tagline">Learn while you vibe code</p>
+                </div>
+            </div>
+            <button class="btn-icon-btn" onclick="closePanel()" title="Close">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
+            </button>
+        </header>
+
+        <!-- Loading State -->
+        <div class="loading-state" id="loadingState" style="display: none;">
+            <div class="spinner-large"></div>
+            <p>Analyzing your code...</p>
+            <p class="loading-hint">This may take a few seconds</p>
+        </div>
+
+        <!-- Error State -->
+        <div class="error-state" id="errorState" style="display: none;">
+            <div class="error-icon">⚠️</div>
+            <h3>Analysis Failed</h3>
+            <p id="errorMessage">Something went wrong</p>
+            <button class="btn btn-primary" onclick="retryAnalysis()">Try Again</button>
+        </div>
+
+        <!-- Results -->
+        <div class="results-container" id="resultsContainer" style="display: none;">
+            <!-- Source Info -->
+            <div class="source-info" id="sourceInfo">
+                <span class="source-badge" id="sourceBadge">Page Analysis</span>
+            </div>
+
+            <!-- Tech Stack -->
+            <div class="result-section">
+                <div class="section-header">
+                    <span class="section-icon">🛠️</span>
+                    <h2>Tech Stack</h2>
+                </div>
+                <div class="tech-tags" id="techStack"></div>
+            </div>
+
+            <!-- Concepts -->
+            <div class="result-section">
+                <div class="section-header">
+                    <span class="section-icon">💡</span>
+                    <h2>Key Concepts</h2>
+                </div>
+                <ul class="concept-list" id="concepts"></ul>
+            </div>
+
+            <!-- Explanation -->
+            <div class="result-section">
+                <div class="section-header">
+                    <span class="section-icon">📖</span>
+                    <h2>Explanation</h2>
+                </div>
+                <div class="explanation-box">
+                    <p id="explanation"></p>
+                </div>
+            </div>
+
+            <!-- Architecture -->
+            <div class="result-section">
+                <div class="section-header">
+                    <span class="section-icon">🏗️</span>
+                    <h2>Architecture</h2>
+                </div>
+                <div class="architecture-box" id="architecture"></div>
+            </div>
+
+            <!-- Learning Roadmap -->
+            <div class="result-section">
+                <div class="section-header">
+                    <span class="section-icon">🗺️</span>
+                    <h2>Learning Roadmap</h2>
+                </div>
+                <ol class="roadmap-list" id="learningRoadmap"></ol>
+            </div>
+
+            <!-- Skill Gaps -->
+            <div class="result-section">
+                <div class="section-header">
+                    <span class="section-icon">🎯</span>
+                    <h2>Skill Gaps</h2>
+                </div>
+                <div class="skill-gaps" id="skillGaps"></div>
+            </div>
+
+            <!-- Actions -->
+            <div class="actions-bar">
+                <button class="btn btn-secondary" onclick="copyResults()">
+                    <span>📋</span> Copy All
+                </button>
+                <button class="btn btn-secondary" onclick="openFullApp()">
+                    <span>🚀</span> Open Full App
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="sidepanel.js"></script>
+</body>
+</html>
